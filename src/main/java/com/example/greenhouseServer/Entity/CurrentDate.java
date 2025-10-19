@@ -4,25 +4,40 @@ import com.example.greenhouseServer.Entity.EnumList.TypeBool;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "current_date_tbl")
+@Table(name = "current_state")
 public class CurrentDate {
+
     @Id
     @ManyToOne
-    @JoinColumn(name = "id_tg_user", referencedColumnName = "id_tg_user")
+    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
     private Users user;
 
+    @Column(name = "token")
+    private String token;
+
     @Column(name = "type")
+    @Enumerated(EnumType.STRING)
     private TypeBool typeBool;
 
-    @Column(name = "boolean")
+    @Column(name = "status")
     private Boolean isWorking;
 
     public CurrentDate() {
     }
 
-    public CurrentDate(TypeBool typeBool, Boolean isWorking) {
+    public CurrentDate(Users user, String token, TypeBool typeBool, Boolean isWorking) {
+        this.user = user;
+        this.token = token;
         this.typeBool = typeBool;
         this.isWorking = isWorking;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public TypeBool getTypeBool() {

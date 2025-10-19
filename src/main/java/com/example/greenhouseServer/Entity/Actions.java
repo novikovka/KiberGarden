@@ -7,27 +7,52 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "actions_tbl")
+@Table(name = "actions")
 public class Actions {
 
     @Id
     @ManyToOne
-    @JoinColumn(name = "id_tg_user", referencedColumnName = "id_tg_user")
+    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
     private Users user;
 
+    @Column(name = "token")
+    private String token;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "type")
     private TypeBool typeBool;
 
     @Column(name = "time")
     private LocalTime timeAction;
 
+    @Column(name = "status")
+    private Boolean isWorking;
+
     public Actions() {
     }
 
-    public Actions(Users user, TypeBool typeBool, LocalTime timeAction) {
+    public Actions(Users user, String token, TypeBool typeBool, LocalTime timeAction, Boolean isWorking) {
         this.user = user;
+        this.token = token;
         this.typeBool = typeBool;
         this.timeAction = timeAction;
+        this.isWorking = isWorking;
+    }
+
+    public Boolean getWorking() {
+        return isWorking;
+    }
+
+    public void setWorking(Boolean working) {
+        isWorking = working;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public Users getUser() {

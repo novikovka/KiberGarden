@@ -7,26 +7,34 @@ import jakarta.persistence.Table;
 
 
 @Entity
-@Table(name = "users_tbl")
+@Table(name = "users")
 public class Users {
 
     @Id
-    @Column(name = "id_tg_user")
+    @Column(name = "telegram_id")
     private Long id;
 
-    @Column(name = "id_token_greenhouse")
+    @Column(name = "token")
     private String token;
 
-    @Column(name = "ip_greenhouse")
+    @Column(name = "ip_address")
     private String ipAddress;
+
+    @Column(name = "name")
+    private String nameTgUser;
+
+    @Column(name = "plant_name")
+    private String plantName;
 
     public Users() {
     }
 
-    public Users(Long id, String token, String ipAddress) {
+    public Users(Long id, String token, String ipAddress, String nameTgUser, String plantName) {
         this.id = id;
         this.token = token;
         this.ipAddress = ipAddress;
+        this.nameTgUser = nameTgUser;
+        this.plantName = plantName;
     }
 
     public Long getId() {
@@ -51,5 +59,21 @@ public class Users {
 
     public void setIpAddress(String ipAddress) {
         this.ipAddress = ipAddress;
+    }
+
+    public String getNameTgUser() {
+        return nameTgUser;
+    }
+
+    public void setNameTgUser(String nameTgUser) {
+        this.nameTgUser = nameTgUser;
+    }
+
+    public String getPlantName() {
+        return plantName;
+    }
+
+    public void setPlantName(String plantName) {
+        this.plantName = plantName;
     }
 }

@@ -4,14 +4,19 @@ import com.example.greenhouseServer.Entity.EnumList.TypeValue;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "notifications_tbl")
+@Table(name = "notifications")
 public class Notifications {
+
     @Id
     @ManyToOne
-    @JoinColumn(name = "id_tg_user", referencedColumnName = "id_tg_user")
+    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
     private Users user;
 
-    @Column(name = "name_value")
+    @Column(name = "token")
+    private String token;
+
+    @Column(name = "type")
+    @Enumerated(EnumType.STRING)
     private TypeValue nameValue;
 
     @Column(name = "value")
@@ -20,10 +25,19 @@ public class Notifications {
     public Notifications() {
     }
 
-    public Notifications(Users user, TypeValue nameValue, int value) {
+    public Notifications(Users user, String token, TypeValue nameValue, int value) {
         this.user = user;
+        this.token = token;
         this.nameValue = nameValue;
         this.value = value;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public int getValue() {

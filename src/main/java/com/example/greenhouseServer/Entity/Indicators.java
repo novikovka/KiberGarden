@@ -6,15 +6,19 @@ import jakarta.persistence.*;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "indicators_for_day")
+@Table(name = "sensor_data")
 public class Indicators {
 
     @Id
     @ManyToOne
-    @JoinColumn(name = "id_tg_user", referencedColumnName = "id_tg_user")
+    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
     private Users user;
 
-    @Column(name = "name_value")
+    @Column(name = "token")
+    private String token;
+
+    @Column(name = "type")
+    @Enumerated(EnumType.STRING)
     private TypeValue nameValue;
 
     @Column(name = "value")
@@ -26,11 +30,20 @@ public class Indicators {
     public Indicators() {
     }
 
-    public Indicators(Users user, TypeValue nameValue, int value, LocalTime timeAction) {
+    public Indicators(Users user, String token, TypeValue nameValue, int value, LocalTime timeAction) {
         this.user = user;
+        this.token = token;
         this.nameValue = nameValue;
         this.value = value;
         this.timeAction = timeAction;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public Users getUser() {

@@ -5,13 +5,16 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "recommendations_tbl")
+@Table(name = "recommendations")
 public class Recommendations {
 
     @Id
     @ManyToOne
-    @JoinColumn(name = "id_tg_user", referencedColumnName = "id_tg_user")
+    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
     private Users user;
+
+    @Column(name = "token")
+    private String token;
 
     @Column(name = "date")
     private LocalDate date;
@@ -22,10 +25,19 @@ public class Recommendations {
     public Recommendations() {
     }
 
-    public Recommendations(Users user, LocalDate date, String text) {
+    public Recommendations(Users user, String token, LocalDate date, String text) {
         this.user = user;
+        this.token = token;
         this.date = date;
         this.text = text;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public Users getUser() {
