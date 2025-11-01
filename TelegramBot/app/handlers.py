@@ -3,6 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup #для состояний
 from aiogram.fsm.context import FSMContext
+from datetime import datetime
 
 #импортируем все по отношению к main
 import app.keyboards as kb
@@ -12,12 +13,18 @@ import database
 router = Router()
 
 class Register(StatesGroup):
-    waiting_for_ip = State()
-    waiting_for_token = State()
+    name = State()
+    #ip_address = State()
+    token = State()
+    plat_name = State()
+    telegram_id = State()
+
 
 class AddNewAction(StatesGroup):
     action_type = State()
     action_time = State()
+    action_status = State()
+    #token = State()
 
 text_state = (
             "Текущие показания датчиков:\n\n"
@@ -40,6 +47,81 @@ notifications_triggers = (
     f"🌡 Температура воздуха: 40°C\n"
     f"🌱 Влажность почвы: 70%\n"
 )
+
+@router.callback_query(F.data == "add_settings")
+async def add_settings_type(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AddNewAction.action_type)
+    await callback.message.answer(
+        "Выберите тип нового действия:",
+        reply_markup=kb.new_action_type
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("add_"), AddNewAction.action_type)
+async def add_settings_select(callback: CallbackQuery, state: FSMContext):
+    data = callback.data
+
+    # формат: add_<тип>_<статус>
+    _, action_type, action_status = data.split("_")
+    print(action_type)
+    action_status = True if action_status == "on" else False
+
+    # Сохраняем данные в состояние
+    await state.update_data(
+        action_type=action_type,
+        action_status=action_status
+    )
+
+    await callback.message.answer(
+        f"Вы выбрали: {action_type} ({'включить' if action_status == 'True' else 'выключить'})\n"
+        "Введите время выполнения (например, 12:00):"
+    )
+
+    # Переход к следующему состоянию
+    await state.set_state(AddNewAction.action_time)
+    await callback.answer()
+
+
+@router.message(AddNewAction.action_time)
+async def add_settings_time(message: Message, state: FSMContext):
+    time_text = message.text.strip()
+
+    import re
+    if not re.match(r"^\d{1,2}:\d{2}$", time_text):
+        await message.answer("Введите время в формате HH:MM, например 09:30")
+        return
+
+    # Сохраняем время
+    await state.update_data(action_time=time_text)
+
+    # Получаем все данные
+    data = await state.get_data()
+    user_id = message.from_user.id
+
+    time_text = data["action_time"]
+    action_time = datetime.strptime(time_text, "%H:%M").time()
+    action_type = data["action_type"].upper()
+
+
+    async with database.pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO actions (status, time, type, telegram_id) VALUES ($1, $2, $3, $4)",
+            data['action_status'], action_time, action_type, user_id  # <-- не оборачиваем user_id в str()
+        )
+
+    # Пример вывода
+    await message.answer(
+        f"✅ Новое действие добавлено:\n"
+        f"Тип: {data['action_type']}\n"
+        f"Статус: {data['action_status']}\n"
+        f"Время: {data['action_time']}"
+    )
+
+    # Очистить состояние
+    await state.clear()
+
+
 ################ получение данных из базы
 
 @router.message(lambda m: m.text and m.text.lower().strip() == "строка")
@@ -49,65 +131,65 @@ async def get_all_users(message: Message):
         return
 
     async with database.pool.acquire() as conn:
-        rows = await conn.fetch('SELECT * FROM users_tbl')
+        rows = await conn.fetch('SELECT * FROM users')
 
         if not rows:
             await message.answer("Таблица пустая.")
             return
 
         response = "\n".join(
-            f"id_tg_user: {r['id_tg_user']}, "
-            f"ip_greenhouse: {r['ip_greenhouse']}, "
-            f"id_token_greenhouse: {r['id_token_greenhouse']}"
+            f"telegram_id: {r['telegram_id']}, "
+            f"name: {r['name']}, "
+            f"plant_name: {r['plant_name']}, "
+            f"token: {r['token']}"
             for r in rows
         )
 
         await message.answer(response)
 
-################ регистрация и запись данных в бд
 
-
-# --- Команда для начала регистрации ---
+# Команда для начала регистрации
 @router.message(F.text.lower() == "/register")
 async def start_registration(message: Message, state: FSMContext):
-    await message.answer("Введите IP адрес вашей теплицы:")
-    await state.set_state(Register.waiting_for_ip)
+    await message.answer("Здравствуйте! Введите ваше имя: ")
+    await state.set_state(Register.name)
 
-
-# --- Получаем IP и переходим к следующему шагу ---
-@router.message(Register.waiting_for_ip)
+@router.message(Register.name)
 async def get_ip(message: Message, state: FSMContext):
-    await state.update_data(ip_greenhouse=message.text)
+    await state.update_data(name=message.text)
     await message.answer("Введите токен вашей теплицы:")
-    await state.set_state(Register.waiting_for_token)
+    await state.set_state(Register.token)
 
+@router.message(Register.token)
+async def get_ip(message: Message, state: FSMContext):
+    await state.update_data(token=message.text)
+    await message.answer("Какое растение вы хотите выращивать?")
+    await state.set_state(Register.plat_name)
 
-# --- Получаем токен и записываем всё в базу ---
-@router.message(Register.waiting_for_token)
+@router.message(Register.plat_name)
 async def get_token(message: Message, state: FSMContext):
     user_data = await state.get_data()
-    ip = user_data["ip_greenhouse"]
-    token = message.text
-    user_id = message.from_user.id  # <-- это уже int
+    name = user_data["name"]
+    token = user_data["token"]
+    plant_name = message.text
+    user_id = message.from_user.id
 
     async with database.pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO users_tbl (id_tg_user, ip_greenhouse, id_token_greenhouse) VALUES ($1, $2, $3)",
-            user_id, ip, token  # <-- не оборачиваем user_id в str()
+            "INSERT INTO users (telegram_id, name, plant_name, token) VALUES ($1, $2, $3, $4)",
+            user_id, name, plant_name, token
         )
 
     await message.answer("✅ Регистрация завершена! Данные сохранены в базу.")
     await state.clear()
 
 
-#################
-
-@router.message(CommandStart()) #говорим что обрабатываем сообщения
+@router.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer('Hello!', reply_markup=kb.main)
     await message.reply('How are you?')
 
-@router.message(Command('state')) #говорим что обрабатываем сообщения
+@router.message(Command('state'))
 async def cmd_state(message: Message):
     await message.answer(text_state)
 
@@ -117,148 +199,15 @@ async def control(message: Message):
     await message.answer('Освещение: ', reply_markup=kb.light_control)
     await message.answer('Проветривание: ', reply_markup=kb.ventilation_control)
 
-@router.message(Command('schedule')) #говорим что обрабатываем сообщения
+@router.message(Command('schedule'))
 async def cmd_schedule(message: Message):
     await message.answer(text_settings, reply_markup=kb.set_settings)
 
-@router.message(Command('notifications')) #говорим что обрабатываем сообщения
+@router.message(Command('notifications'))
 async def cmd_notifications(message: Message):
     await message.answer(notifications_triggers, reply_markup=kb.set_notifications)
 
-'''
-@router.message(F.text == 'у меня все хорошо') #говорим что обрабатываем сообщения
-async def nice(message: Message):
-    await message.reply('Я очень рад')
-
-@router.message(F.text == 'каталог') #говорим что обрабатываем сообщения
-async def catalog(message: Message):
-    await message.answer('выберите категорию товара: ', reply_markup=kb.catalog)
-
-@router.callback_query(F.data == 'T-shirt')
-async def t_shirt(callback: CallbackQuery):
-    await callback.message.answer('Вы выбрали категорю футболок.')
-'''
-'''
-
-@router.callback_query(F.data == 'add_settings')
-async def add_settings_type(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(AddNewAction.action_type)  # устанавливаем состояние
-    await callback.message.answer('Выберите тип нового действия', reply_markup=kb.new_action_type)
-
-@router.callback_query(F.data == "add_watering_on")
-async def add_settings_time(callback: CallbackQuery, state: FSMContext):
-    await state.update_data(action_type="add_watering_on")  # лучше не использовать "type" как имя
-    await state.set_state(AddNewAction.action_time)  # установить состояние
-    await callback.message.answer("Введите время включения полива:")
-    await callback.answer()  # обязательно ответить на callback, чтобы убрать «часики» в Telegram
-
-@router.message(AddNewAction.action_time)
-async def end_added_action(message: Message, state: FSMContext):
-    await state.update_data(action_time = message.text)
-    data = await state.get_data()
-    await message.answer(f'Запланированно новое действие: '
-                         f'Время: {data["action_time"]} \n '
-                         f'Тип: {data["action_type"]} \n ')
-    await state.clear() #очистили состояние пользователя
-    
-'''
-
-@router.callback_query(F.data == 'add_settings')
-async def add_settings_type(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(AddNewAction.action_type)
-    await callback.message.answer(
-        'Выберите тип нового действия:',
-        reply_markup=kb.new_action_type
-    )
-    await callback.answer()
 
 
-# --- Один обработчик для всех типов действий ---
-@router.callback_query(F.data.in_({
-    "add_watering_on",
-    "add_light_on",
-    "add_light_off",
-    "add_vent_on",
-    "add_vent_off"
-}))
-async def add_settings_time(callback: CallbackQuery, state: FSMContext):
-    action_type = callback.data
-    await state.update_data(action_type=action_type)
-    await state.set_state(AddNewAction.action_time)
-
-    messages = {
-        "add_watering_on": "Введите время включения полива:",
-        "add_light_on": "Введите время включения света:",
-        "add_light_off": "Введите время выключения света:",
-        "add_vent_on": "Введите время включения вентиляции:",
-        "add_vent_off": "Введите время выключения вентиляции:"
-    }
-
-    await callback.message.answer(messages.get(action_type, "Введите время действия:"))
-    await callback.answer()
-
-
-@router.message(AddNewAction.action_time)
-async def end_added_action(message: Message, state: FSMContext):
-    await state.update_data(action_time=message.text)
-    data = await state.get_data()
-
-    action_names = {
-        "add_watering_on": "Включение полива",
-        "add_light_on": "Включение света",
-        "add_light_off": "Выключение света",
-        "add_vent_on": "Включение проветривания",
-        "add_vent_off": "Выключение проветривания"
-    }
-
-    action_text = action_names.get(data["action_type"], data["action_type"])
-    action_time = data["action_time"]
-
-    await message.answer(
-        f"✅ Запланировано новое действие:\n"
-        f"👉 {action_text} в {action_time}"
-    )
-
-    await state.clear()
-
-
-'''
-
-# мы не можем словить имя потому что оно у всех разное,
-# поэтому присваиваем пользователю состояние пока он вводит имя и потом будем отлавливать это состояние
-@router.message(Command('register'))
-async def register(message: Message, state: FSMContext):
-    await state.set_state(Register.name) #устанавливаем состояние
-    await message.answer('Введите ваше имя')
-
-@router.message(Register.name) #ловим состояние "name"
-async def register_name(message: Message, state: FSMContext):
-    await state.update_data(name=message.text)
-    await state.set_state(Register.token) #устанавливаем состояние
-    await message.answer('Введите токен вашей теплицы')
-
-@router.message(Register.token)
-async def register_token(message: Message, state: FSMContext):
-    await state.update_data(token=message.text)
-    await state.set_state(Register.plant_name) #устанавливаем состояние
-    await message.answer('Введите название растения которое вы хотите выращивать')
-
-@router.message(Register.plant_name)
-async def register_plant_name(message: Message, state: FSMContext):
-    await state.update_data(plant_name=message.text)
-    await state.set_state(Register.phone) #устанавливаем состояние
-    await message.answer('Отправьте ваш номер телефона', reply_markup=kb.get_number)
-
-@router.message(Register.phone)
-async def register_phone(message: Message, state: FSMContext):
-    await state.update_data(phone=message.text)
-    data = await state.get_data()
-    await message.answer(f'Ваше имя: {data["name"]} \n '
-                         f'Ваш токен: {data["token"]} \n '
-                         f'Ваше растение: {data["plant_name"]} \n '
-                         f'Ваш номер: {data["phone"]} \n')
-    await state.clear() #очистили состояние пользователя
-
-'''
 
 
