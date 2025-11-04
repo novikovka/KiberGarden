@@ -11,6 +11,7 @@ import app.keyboards as kb
 #from database import pool
 import database
 from database import get_token_by_telegram_id
+from database import get_current_status
 
 
 router = Router()
@@ -64,9 +65,16 @@ async def add_settings_type(callback: CallbackQuery, state: FSMContext):
     )
     await callback.answer()
 
-@router.callback_query(F.data.startswith("add_"), AddNewAction.action_type)
+
+@router.callback_query((F.data.startswith("add_") | (F.data == "cancel")),AddNewAction.action_type)
 async def add_settings_select(callback: CallbackQuery, state: FSMContext):
     data = callback.data
+
+    if data == "cancel":
+        await callback.message.answer("Добавление нового действия отменено ✅")
+        await state.clear()  # очищаем состояние
+        await callback.answer()
+        return
 
     # формат: add_<тип>_<статус>
     _, action_type, action_status = data.split("_")
@@ -141,6 +149,40 @@ async def add_new_notification(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(AddNewNotification.notification_type)
 async def add_notification_type(callback: CallbackQuery, state: FSMContext):
+    chosen_type = callback.data
+
+    # ✅ Обработка кнопки "Отменить"
+    if chosen_type == "cancel":
+        await callback.message.answer("Добавление нового триггера уведомлений отменено ✅")
+        await state.clear()  # очищаем состояние
+        await callback.answer()
+        return
+
+    # Сохраняем выбранный тип
+    await state.update_data(notification_type=chosen_type)
+
+    # ✅ Обрабатываем выбранные типы триггеров
+    if chosen_type == "temperature":
+        await callback.message.answer("Введите значение температуры воздуха при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    elif chosen_type == "hum_air":
+        await callback.message.answer("Введите значение влажности воздуха при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    elif chosen_type == "hum_soil":
+        await callback.message.answer("Введите значение влажности почвы при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    else:
+        await callback.message.answer("Неизвестная команда, попробуйте снова.")
+
+    await callback.answer()
+
+
+'''
+@router.callback_query(AddNewNotification.notification_type)
+async def add_notification_type(callback: CallbackQuery, state: FSMContext):
     # Сохраняем то, что выбрал пользователь
     chosen_type = callback.data
     await state.update_data(notification_type=chosen_type)
@@ -164,6 +206,7 @@ async def add_notification_type(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Неизвестная команда, попробуйте снова.")
 
     await callback.answer()
+'''
 
 
 @router.message(AddNewNotification.notification_value)
@@ -264,11 +307,85 @@ async def cmd_start(message: Message):
 async def cmd_state(message: Message):
     await message.answer(text_state)
 
-@router.message(Command('control'))
+
+@router.message(Command('control')) # Переходим в управление из главного меню
 async def control(message: Message):
-    await message.answer('Полив: ', reply_markup=kb.watering_control)
-    await message.answer('Освещение: ', reply_markup=kb.light_control)
-    await message.answer('Проветривание: ', reply_markup=kb.ventilation_control)
+    user_id = message.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+
+    # Получаем текущий статус
+    watering_status = await get_current_status(token, user_id, "WATERING")
+    light_status = await get_current_status(token, user_id, "LIGHT")
+
+    # Если записи нет
+    if watering_status is None:
+        await message.answer(
+            "⚠️ Не найдено состояние полива. Возможно, устройство ещё не подключено.",
+        )
+        return
+
+    if light_status is None:
+        await message.answer(
+            "⚠️ Не найдено состояние освещения. Возможно, устройство ещё не подключено.",
+        )
+        return
+
+    # Формируем текст ответа
+    if watering_status:
+        watering_text = "Полив: Включён"
+    else:
+        watering_text = "Полив: Выключен"
+
+    if light_status:
+        light_text = "Освещение: Включёно"
+    else:
+        light_text = "Освещение: Выключёно"
+
+    # Отправляем сообщение с динамической клавиатурой
+    await message.answer(watering_text,reply_markup=kb.watering_control(watering_status))
+    await message.answer(light_text, reply_markup=kb.light_control(light_status))
+
+@router.callback_query(F.data == "watering_off") # Нажатие "Выключить полив"
+async def watering_off(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+
+    # обновляем статус полива в БД на False
+    async with database.pool.acquire() as conn:
+        await conn.execute("""
+            UPDATE current_state
+            SET status = FALSE
+            WHERE token = $1 AND telegram_id = $2 AND type = 'WATERING'
+        """, token, user_id)
+
+    await callback.answer("Полив отключён ✅")
+
+    # отправляем обновлённую клавиатуру (теперь будет кнопка "включить")
+    await callback.message.edit_text(
+        "Полив: Отключён",
+        reply_markup=kb.watering_control(False)
+    )
+
+@router.callback_query(F.data == "watering_on") # Нажатие "Включить полив"
+async def watering_on(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+
+    # обновляем статус полива в БД
+    async with database.pool.acquire() as conn:
+        await conn.execute("""
+            UPDATE current_state
+            SET status = TRUE
+            WHERE token = $1 AND telegram_id = $2 AND type = 'WATERING'
+        """, token, user_id)
+
+    await callback.answer("Полив включен ✅")
+
+    # отправляем обновлённую клавиатуру (теперь будет кнопка "включить")
+    await callback.message.edit_text(
+        "Полив: Отключён",
+        reply_markup=kb.watering_control(True)
+    )
 
 @router.message(Command('schedule'))
 async def cmd_schedule(message: Message):

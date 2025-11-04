@@ -1,8 +1,6 @@
 import asyncpg
 from typing import Optional
 
-import psycopg2
-
 pool: Optional[asyncpg.Pool] = None
 
 async def init_db():
@@ -23,7 +21,7 @@ async def close_db():
         await pool.close()
         print("🟡 Database pool closed")
 
-
+### получение токена теплицы по телеграм айди
 async def get_token_by_telegram_id(telegram_id: int):
     global pool
     async with pool.acquire() as conn:
@@ -35,6 +33,16 @@ async def get_token_by_telegram_id(telegram_id: int):
             return result["token"]
         return None
 
+### получение текущего статуса
+async def get_current_status(token, telegram_id, trigger_type):
+    query = """
+        SELECT status 
+        FROM current_state
+        WHERE token = $1 AND telegram_id = $2 AND type = $3
+        LIMIT 1;
+    """
+    row = await pool.fetchrow(query, token, telegram_id, trigger_type)
+    return row["status"] if row else None
 
 
 
