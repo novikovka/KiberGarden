@@ -1,14 +1,10 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
+'''
 main = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='каталог')],
                                      [KeyboardButton(text='вторая')],
                                      [KeyboardButton(text='третья'), KeyboardButton(text='четвертая')]],
                            resize_keyboard=True, input_field_placeholder='Выберите пункт меню')
-
-'''
-catalog = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='футболки', callback_data='T-shirt')],
-                                                [InlineKeyboardButton(text='кроссовки', callback_data='sneakers')],
-                                                [InlineKeyboardButton(text='кепки', callback_data='cap')]])
 '''
 
 get_number = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Отправить номер', request_contact=True)]], resize_keyboard=True)
@@ -34,4 +30,8 @@ new_action_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(te
                                                 [InlineKeyboardButton(text='выключение освещения', callback_data='add_light_off')],
                                                 [InlineKeyboardButton(text='включение проветривания', callback_data='add_vent_on')],
                                                 [InlineKeyboardButton(text='выключение проветривания', callback_data='add_vent_off')]])
+
+new_notification_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='температура воздуха', callback_data='temperature')],
+                                                [InlineKeyboardButton(text='влажность воздуха', callback_data='hum_air')],
+                                                [InlineKeyboardButton(text='влажность почвы', callback_data='hum_soil')]])
 

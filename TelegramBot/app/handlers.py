@@ -1,4 +1,5 @@
 from aiogram import F, Router
+from aiogram import types
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup #для состояний
@@ -9,6 +10,8 @@ from datetime import datetime
 import app.keyboards as kb
 #from database import pool
 import database
+from database import get_token_by_telegram_id
+
 
 router = Router()
 
@@ -25,6 +28,10 @@ class AddNewAction(StatesGroup):
     action_time = State()
     action_status = State()
     #token = State()
+
+class AddNewNotification(StatesGroup):
+    notification_type = State()
+    notification_value = State()
 
 text_state = (
             "Текущие показания датчиков:\n\n"
@@ -47,7 +54,7 @@ notifications_triggers = (
     f"🌡 Температура воздуха: 40°C\n"
     f"🌱 Влажность почвы: 70%\n"
 )
-
+### добавление нового запланированного действия
 @router.callback_query(F.data == "add_settings")
 async def add_settings_type(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddNewAction.action_type)
@@ -56,7 +63,6 @@ async def add_settings_type(callback: CallbackQuery, state: FSMContext):
         reply_markup=kb.new_action_type
     )
     await callback.answer()
-
 
 @router.callback_query(F.data.startswith("add_"), AddNewAction.action_type)
 async def add_settings_select(callback: CallbackQuery, state: FSMContext):
@@ -74,7 +80,7 @@ async def add_settings_select(callback: CallbackQuery, state: FSMContext):
     )
 
     await callback.message.answer(
-        f"Вы выбрали: {action_type} ({'включить' if action_status == 'True' else 'выключить'})\n"
+        f"Вы выбрали: {action_type} ({'включить' if action_status == True else 'выключить'})\n"
         "Введите время выполнения (например, 12:00):"
     )
 
@@ -99,15 +105,16 @@ async def add_settings_time(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
 
-    time_text = data["action_time"]
-    action_time = datetime.strptime(time_text, "%H:%M").time()
+    #time_text = data["action_time"]
+    action_time = datetime.strptime(data["action_time"], "%H:%M").time()
     action_type = data["action_type"].upper()
-
+    #action_status = data["action_status"]
+    token = await get_token_by_telegram_id(user_id)
 
     async with database.pool.acquire() as conn:
         await conn.execute(
-            "INSERT INTO actions (status, time, type, telegram_id) VALUES ($1, $2, $3, $4)",
-            data['action_status'], action_time, action_type, user_id  # <-- не оборачиваем user_id в str()
+            "INSERT INTO actions (status, time, token, type, telegram_id) VALUES ($1, $2, $3, $4, $5)",
+            data["action_status"], action_time, token, action_type, user_id
         )
 
     # Пример вывода
@@ -116,6 +123,70 @@ async def add_settings_time(message: Message, state: FSMContext):
         f"Тип: {data['action_type']}\n"
         f"Статус: {data['action_status']}\n"
         f"Время: {data['action_time']}"
+    )
+
+    # Очистить состояние
+    await state.clear()
+
+### Добавление нового триггера уведомлений
+
+@router.callback_query(F.data == "add_trigger")
+async def add_new_notification(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AddNewNotification.notification_type)
+    await callback.message.answer(
+        "Выберите тип нового триггера",
+        reply_markup=kb.new_notification_type
+    )
+    await callback.answer()
+
+@router.callback_query(AddNewNotification.notification_type)
+async def add_notification_type(callback: CallbackQuery, state: FSMContext):
+    # Сохраняем то, что выбрал пользователь
+    chosen_type = callback.data
+    await state.update_data(notification_type=chosen_type)
+
+    # Отвечаем пользователю в зависимости от выбора
+    if chosen_type == "temperature":
+        await callback.message.answer("Введите значение температуры воздуха при котором Вы хотите получать уводомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    elif chosen_type == "hum_air":
+        await callback.message.answer("Введите значение влажности воздуха при котором Вы хотите получать уводомление:")
+        await state.set_state(AddNewNotification.notification_value)
+        # await state.set_state(AddNewNotification.sensor_choice)
+
+    elif chosen_type == "hum_soil":
+        await callback.message.answer("Введите значение влажности почвы при котором Вы хотите получать уводомление:")
+        await state.set_state(AddNewNotification.notification_value)
+        # await state.set_state(AddNewNotification.weather_input)
+
+    else:
+        await callback.message.answer("Неизвестная команда, попробуйте снова.")
+
+    await callback.answer()
+
+
+@router.message(AddNewNotification.notification_value)
+async def add_notification_value(message: Message, state: FSMContext):
+    new_value = message.text.strip()
+    await state.update_data(notification_value= int(new_value))
+
+    # Получаем все данные
+    data = await state.get_data()
+    user_id = message.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+    notification_type = data["notification_type"].upper()
+
+    async with database.pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO notifications (type, token, value, telegram_id) VALUES ($1, $2, $3, $4)",
+            notification_type, token, data["notification_value"], user_id
+        )
+
+    await message.answer(
+        f"✅ Новый триггер уведомления добавлен:\n"
+        f"Тип: {data['notification_type']}\n"
+        f"Значение: {data['notification_value']}"
     )
 
     # Очистить состояние
@@ -186,7 +257,7 @@ async def get_token(message: Message, state: FSMContext):
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    await message.answer('Hello!', reply_markup=kb.main)
+    await message.answer('Hello!')
     await message.reply('How are you?')
 
 @router.message(Command('state'))
