@@ -4,12 +4,16 @@ from aiogram import Bot, Dispatcher
 from app.handlers import router
 from database import init_db, close_db
 
+from handlers.init import routers
+
 bot = Bot(token='8246553812:AAGEjCIdml2DsBfA3e4UeyHzjWb4SUwDv6w')
 dp = Dispatcher()
 
 async def main():
     # Подключаем роутеры до старта polling
-    dp.include_router(router)
+    #dp.include_router(router)
+    for r in routers:
+        dp.include_router(r)
 
     # Инициализируем базу данных
     await init_db()

@@ -1,0 +1,103 @@
+from aiogram import F, Router
+from aiogram.types import Message, CallbackQuery
+from aiogram.filters import CommandStart, Command
+from aiogram.fsm.state import State, StatesGroup #для состояний
+from aiogram.fsm.context import FSMContext
+from datetime import datetime
+
+#импортируем все по отношению к main
+import keyboards as kb
+#from database import pool
+import database
+from database import get_token_by_telegram_id
+from database import get_current_status
+
+
+router = Router()
+
+class AddNewNotification(StatesGroup):
+    notification_type = State()
+    notification_value = State()
+
+notifications_triggers = (
+    "Триггеры уведомлений:\n\n"
+    f"💧 Влажность воздуха: 80%\n"
+    f"🌡 Температура воздуха: 40°C\n"
+    f"🌱 Влажность почвы: 70%\n"
+)
+
+@router.message(Command('notifications'))
+async def cmd_notifications(message: Message):
+    await message.answer(notifications_triggers, reply_markup=kb.set_notifications)
+
+### Добавление нового триггера уведомлений
+
+@router.callback_query(F.data == "add_trigger")
+async def add_new_notification(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AddNewNotification.notification_type)
+    await callback.message.answer(
+        "Выберите тип нового триггера",
+        reply_markup=kb.new_notification_type
+    )
+    await callback.answer()
+
+@router.callback_query(AddNewNotification.notification_type)
+async def add_notification_type(callback: CallbackQuery, state: FSMContext):
+    chosen_type = callback.data
+
+    # ✅ Обработка кнопки "Отменить"
+    if chosen_type == "cancel":
+        await callback.message.answer("Добавление нового триггера уведомлений отменено ✅")
+        await state.clear()  # очищаем состояние
+        await callback.answer()
+        return
+
+    # Сохраняем выбранный тип
+    await state.update_data(notification_type=chosen_type)
+
+    # ✅ Обрабатываем выбранные типы триггеров
+    if chosen_type == "temperature":
+        await callback.message.answer("Введите значение температуры воздуха при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    elif chosen_type == "humidity_air":
+        await callback.message.answer("Введите значение влажности воздуха при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    elif chosen_type == "humidity_soil":
+        await callback.message.answer("Введите значение влажности почвы при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    else:
+        await callback.message.answer("Неизвестная команда, попробуйте снова.")
+
+    await callback.answer()
+
+
+@router.message(AddNewNotification.notification_value)
+async def add_notification_value(message: Message, state: FSMContext):
+    new_value = message.text.strip()
+    await state.update_data(notification_value= int(new_value))
+
+    # Получаем все данные
+    data = await state.get_data()
+    user_id = message.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+    notification_type = data["notification_type"].upper()
+
+    async with database.pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO notifications (type, token, value) VALUES ($1, $2, $3)",
+            notification_type, token, data["notification_value"]
+        )
+
+    await message.answer(
+        f"✅ Новый триггер уведомления добавлен:\n"
+        f"Тип: {data['notification_type']}\n"
+        f"Значение: {data['notification_value']}"
+    )
+
+    # Очистить состояние
+    await state.clear()
+
+

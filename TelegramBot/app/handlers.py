@@ -1,5 +1,4 @@
 from aiogram import F, Router
-from aiogram import types
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup #для состояний
@@ -7,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from datetime import datetime
 
 #импортируем все по отношению к main
-import app.keyboards as kb
+import keyboards as kb
 #from database import pool
 import database
 from database import get_token_by_telegram_id
@@ -178,35 +177,6 @@ async def add_notification_type(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Неизвестная команда, попробуйте снова.")
 
     await callback.answer()
-
-
-'''
-@router.callback_query(AddNewNotification.notification_type)
-async def add_notification_type(callback: CallbackQuery, state: FSMContext):
-    # Сохраняем то, что выбрал пользователь
-    chosen_type = callback.data
-    await state.update_data(notification_type=chosen_type)
-
-    # Отвечаем пользователю в зависимости от выбора
-    if chosen_type == "temperature":
-        await callback.message.answer("Введите значение температуры воздуха при котором Вы хотите получать уводомление:")
-        await state.set_state(AddNewNotification.notification_value)
-
-    elif chosen_type == "hum_air":
-        await callback.message.answer("Введите значение влажности воздуха при котором Вы хотите получать уводомление:")
-        await state.set_state(AddNewNotification.notification_value)
-        # await state.set_state(AddNewNotification.sensor_choice)
-
-    elif chosen_type == "hum_soil":
-        await callback.message.answer("Введите значение влажности почвы при котором Вы хотите получать уводомление:")
-        await state.set_state(AddNewNotification.notification_value)
-        # await state.set_state(AddNewNotification.weather_input)
-
-    else:
-        await callback.message.answer("Неизвестная команда, попробуйте снова.")
-
-    await callback.answer()
-'''
 
 
 @router.message(AddNewNotification.notification_value)

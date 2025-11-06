@@ -34,14 +34,14 @@ async def get_token_by_telegram_id(telegram_id: int):
         return None
 
 ### получение текущего статуса
-async def get_current_status(token, telegram_id, trigger_type):
+async def get_current_status(token, trigger_type):
     query = """
         SELECT status 
         FROM current_state
-        WHERE token = $1 AND telegram_id = $2 AND type = $3
+        WHERE token = $1 AND type = $2
         LIMIT 1;
     """
-    row = await pool.fetchrow(query, token, telegram_id, trigger_type)
+    row = await pool.fetchrow(query, token, trigger_type)
     return row["status"] if row else None
 
 
