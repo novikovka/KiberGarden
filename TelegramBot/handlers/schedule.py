@@ -21,6 +21,9 @@ class AddNewAction(StatesGroup):
     action_status = State()
     #token = State()
 
+
+
+'''
 text_settings = (
     "Настройки системы:\n\n"
     f"💡 Включить освещение: 12:00\n"
@@ -31,6 +34,53 @@ text_settings = (
 @router.message(Command('schedule'))
 async def cmd_schedule(message: Message):
     await message.answer(text_settings, reply_markup=kb.set_settings)
+'''
+
+@router.message(Command('schedule'))
+async def cmd_schedule(message: Message):
+    user_id = message.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+
+    async with database.pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT type, status, time
+            FROM actions
+            WHERE token = $1
+            ORDER BY time
+        """, token)
+
+    if not rows:
+        await message.answer(
+            "⚙️ Расписание пока не задано. Вы можете добавить время включения в настройках.",
+            reply_markup=kb.set_settings
+        )
+        return
+
+    # Иконки и человеко-читаемые имена
+    icons = {
+        "WATERING": "💧 Полив",
+        "LIGHT": "💡 Освещение",
+        "EMERGENCY": "🌬 Проветривание"
+    }
+
+    # Формируем текст расписания
+    text_lines = ["Настройки системы:\n"]
+
+    for row in rows:
+        action_time = row["time"].strftime("%H:%M") if row["time"] else "—"
+        device_name = icons.get(row["type"], row["type"].title())
+
+        if row["status"]:
+            line = f"{device_name}: включение в {action_time}"
+        else:
+            line = f"{device_name}: выключение в {action_time}"
+
+        text_lines.append(line)
+
+    text_settings = "\n".join(text_lines)
+
+    await message.answer(text_settings, reply_markup=kb.set_settings)
+
 
 ### добавление нового запланированного действия
 @router.callback_query(F.data == "add_settings")

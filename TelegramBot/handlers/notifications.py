@@ -15,9 +15,12 @@ from database import get_current_status
 
 router = Router()
 
+
 class AddNewNotification(StatesGroup):
     notification_type = State()
     notification_value = State()
+
+'''
 
 notifications_triggers = (
     "Триггеры уведомлений:\n\n"
@@ -29,6 +32,51 @@ notifications_triggers = (
 @router.message(Command('notifications'))
 async def cmd_notifications(message: Message):
     await message.answer(notifications_triggers, reply_markup=kb.set_notifications)
+    
+'''
+
+@router.message(Command('notifications'))
+async def cmd_notifications(message: Message):
+    user_id = message.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+
+    # Запрос в базу данных
+    async with database.pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT type, value
+            FROM notifications
+            WHERE token = $1
+            ORDER BY type
+        """, token)
+
+    if not rows:
+        await message.answer("🔔 Уведомления пока не настроены.", reply_markup=kb.set_notifications)
+        return
+
+    # Формируем текст
+    type_map = {
+        "TEMPERATURE": "🌡 Температура воздуха",
+        "HUMIDITY_AIR": "💧 Влажность воздуха",
+        "HUMIDITY_SOIL": "🌱 Влажность почвы",
+        "WATER_LEVEL": "🚰 Уровень воды",
+    }
+
+    text_lines = ["Триггеры уведомлений:\n"]
+    for row in rows:
+        sensor_name = type_map.get(row["type"], row["type"])
+        value = row["value"]
+
+        # Форматирование единиц измерения
+        if row["type"] == "TEMPERATURE":
+            text_lines.append(f"{sensor_name}: {value}°C")
+        elif row["type"] in ("HUM_AIR", "HUM_SOIL", "WATER_LEVEL"):
+            text_lines.append(f"{sensor_name}: {value}%")
+        else:
+            text_lines.append(f"{sensor_name}: {value}")
+
+    # Отправляем пользователю красиво оформленный текст
+    await message.answer("\n".join(text_lines), reply_markup=kb.set_notifications)
+
 
 ### Добавление нового триггера уведомлений
 

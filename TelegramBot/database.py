@@ -44,6 +44,17 @@ async def get_current_status(token, trigger_type):
     row = await pool.fetchrow(query, token, trigger_type)
     return row["status"] if row else None
 
+# получение названия растения, которое выращивает пользователь
+async def get_user_plant_name(user_id: int) -> str:
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT plant_name FROM users WHERE telegram_id = $1",
+            user_id
+        )
+    return row["plant_name"] if row and row["plant_name"] else "растение"
+
+
+
 
 
 '''
