@@ -1,6 +1,8 @@
 package com.example.greenhouseServer.Entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
@@ -9,14 +11,17 @@ import java.time.LocalDate;
 public class Recommendations {
 
     @Id
-    @ManyToOne
-    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
-    private Users user;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_recommendations")
+    private Long idRecommendations;
 
-    @Column(name = "token")
+    @JoinColumn(name = "token", referencedColumnName = "token")
+    @NotEmpty(message = "token do not empty")
+    @Size(min = 1, max = 30, message = "Size token is error")
     private String token;
 
     @Column(name = "date")
+    @NotEmpty(message = "date do not empty")
     private LocalDate date;
 
     @Column(name = "text")
@@ -25,11 +30,18 @@ public class Recommendations {
     public Recommendations() {
     }
 
-    public Recommendations(Users user, String token, LocalDate date, String text) {
-        this.user = user;
+    public Recommendations(String token, LocalDate date, String text) {
         this.token = token;
         this.date = date;
         this.text = text;
+    }
+
+    public Long getIdRecommendations() {
+        return idRecommendations;
+    }
+
+    public void setIdRecommendations(Long idRecommendations) {
+        this.idRecommendations = idRecommendations;
     }
 
     public String getToken() {
@@ -38,14 +50,6 @@ public class Recommendations {
 
     public void setToken(String token) {
         this.token = token;
-    }
-
-    public Users getUser() {
-        return user;
-    }
-
-    public void setUser(Users user) {
-        this.user = user;
     }
 
     public LocalDate getDate() {

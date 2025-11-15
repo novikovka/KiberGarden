@@ -2,6 +2,10 @@ package com.example.greenhouseServer.Entity;
 
 import com.example.greenhouseServer.Entity.EnumList.TypeValue;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalTime;
 
@@ -10,18 +14,22 @@ import java.time.LocalTime;
 public class Indicators {
 
     @Id
-    @ManyToOne
-    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
-    private Users user;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_date")
+    private Long idDate;
 
-    @Column(name = "token")
+    @JoinColumn(name = "token", referencedColumnName = "token")
+    @NotEmpty(message = "token do not empty")
+    @Size(min = 1, max = 30, message = "Size token is error")
     private String token;
 
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
+    @NotNull(message = "type do not empty")
     private TypeValue nameValue;
 
     @Column(name = "value")
+    @Min(value = 0, message = "value do not < 0")
     private int value;
 
     @Column(name = "time")
@@ -30,12 +38,19 @@ public class Indicators {
     public Indicators() {
     }
 
-    public Indicators(Users user, String token, TypeValue nameValue, int value, LocalTime timeAction) {
-        this.user = user;
+    public Indicators(String token, TypeValue nameValue, int value, LocalTime timeAction) {
         this.token = token;
         this.nameValue = nameValue;
         this.value = value;
         this.timeAction = timeAction;
+    }
+
+    public Long getIdDate() {
+        return idDate;
+    }
+
+    public void setIdDate(Long idDate) {
+        this.idDate = idDate;
     }
 
     public String getToken() {
@@ -44,14 +59,6 @@ public class Indicators {
 
     public void setToken(String token) {
         this.token = token;
-    }
-
-    public Users getUser() {
-        return user;
-    }
-
-    public void setUser(Users user) {
-        this.user = user;
     }
 
     public TypeValue getNameValue() {

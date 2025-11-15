@@ -2,8 +2,9 @@ package com.example.greenhouseServer.Entity;
 
 import com.example.greenhouseServer.Entity.EnumList.TypeBool;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
-import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
@@ -11,32 +12,44 @@ import java.time.LocalTime;
 public class Actions {
 
     @Id
-    @ManyToOne
-    @JoinColumn(name = "telegram_id", referencedColumnName = "telegram_id")
-    private Users user;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_actions")
+    private Long idActions;
 
-    @Column(name = "token")
+    @JoinColumn(name = "token", referencedColumnName = "token")
+    @NotEmpty(message = "token do not empty")
+    @Size(min = 1, max = 30, message = "Size token is error")
     private String token;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")
+    @NotEmpty(message = "type do not empty")
     private TypeBool typeBool;
 
     @Column(name = "time")
+    @NotEmpty(message = "time do not empty")
     private LocalTime timeAction;
 
     @Column(name = "status")
+    @NotEmpty(message = "bool working do not empty")
     private Boolean isWorking;
 
     public Actions() {
     }
 
-    public Actions(Users user, String token, TypeBool typeBool, LocalTime timeAction, Boolean isWorking) {
-        this.user = user;
+    public Actions(String token, TypeBool typeBool, LocalTime timeAction, Boolean isWorking) {
         this.token = token;
         this.typeBool = typeBool;
         this.timeAction = timeAction;
         this.isWorking = isWorking;
+    }
+
+    public Long getIdActions() {
+        return idActions;
+    }
+
+    public void setIdActions(Long idActions) {
+        this.idActions = idActions;
     }
 
     public Boolean getWorking() {
@@ -53,14 +66,6 @@ public class Actions {
 
     public void setToken(String token) {
         this.token = token;
-    }
-
-    public Users getUser() {
-        return user;
-    }
-
-    public void setUser(Users user) {
-        this.user = user;
     }
 
     public TypeBool getTypeBool() {
