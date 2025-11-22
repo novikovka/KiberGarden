@@ -20,21 +20,11 @@ class AddNewNotification(StatesGroup):
     notification_type = State()
     notification_value = State()
 
-'''
+class RemoveNotification(StatesGroup):
+    not_remove_type = State()
+    not_remove_value = State()
 
-notifications_triggers = (
-    "Триггеры уведомлений:\n\n"
-    f"💧 Влажность воздуха: 80%\n"
-    f"🌡 Температура воздуха: 40°C\n"
-    f"🌱 Влажность почвы: 70%\n"
-)
-
-@router.message(Command('notifications'))
-async def cmd_notifications(message: Message):
-    await message.answer(notifications_triggers, reply_markup=kb.set_notifications)
-    
-'''
-
+### Переход из основного меню в раздел уведомлений
 @router.message(Command('notifications'))
 async def cmd_notifications(message: Message):
     user_id = message.from_user.id
@@ -149,3 +139,69 @@ async def add_notification_value(message: Message, state: FSMContext):
     await state.clear()
 
 
+### Удаление триггера уведомлений
+@router.callback_query(F.data == "remove_trigger")
+async def remove_notification(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(RemoveNotification.not_remove_type)
+    await callback.message.answer(
+        "Выберите тип триггера для удаления:",
+        reply_markup=kb.remove_notifications
+    )
+    await callback.answer()
+
+@router.callback_query(RemoveNotification.not_remove_type)
+async def remove_notification_type(callback: CallbackQuery, state: FSMContext):
+    chosen_type = callback.data
+
+    # ✅ Обработка кнопки "Отменить"
+    if chosen_type == "cancel":
+        await callback.message.answer("Удаление триггера уведомлений отменено ✅")
+        await state.clear()  # очищаем состояние
+        await callback.answer()
+        return
+
+    # Сохраняем выбранный тип
+    await state.update_data(not_remove_type=chosen_type)
+
+    # ✅ Обрабатываем выбранные типы триггеров
+    if chosen_type == "temperature":
+        await callback.message.answer("Введите значение триггера температуры который Вы хотите удалить:")
+        await state.set_state(RemoveNotification.not_remove_value)
+
+    elif chosen_type == "humidity_air":
+        await callback.message.answer("Введите значение триггера влажности воздуха который Вы хотите удалить:")
+        await state.set_state(RemoveNotification.not_remove_value)
+
+    elif chosen_type == "humidity_soil":
+        await callback.message.answer("Введите значение триггера влажности почвы который Вы хотите удалить:")
+        await state.set_state(RemoveNotification.not_remove_value)
+
+    else:
+        await callback.message.answer("Неизвестная команда, попробуйте снова.")
+
+    await callback.answer()
+
+@router.message(RemoveNotification.not_remove_value)
+async def remove_notification_value(message: Message, state: FSMContext):
+    new_value = message.text.strip()
+    await state.update_data(not_remove_value= int(new_value))
+
+    # Получаем все данные
+    data = await state.get_data()
+    user_id = message.from_user.id
+    token = await get_token_by_telegram_id(user_id)
+    notification_type = data["not_remove_type"].upper()
+
+    async with database.pool.acquire() as conn:
+        await conn.execute(
+            "DELETE FROM notifications WHERE type = $1 AND token = $2 AND value = $3",
+            notification_type, token, data["not_remove_value"]
+        )
+
+    await message.answer(
+        f"✅ Триггер уведомления {data['not_remove_type']}, \n"
+        f"значение: {data['not_remove_value']} - удален!\n"
+    )
+
+    # Очистить состояние
+    await state.clear()

@@ -11,6 +11,18 @@ set_settings = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=
 set_notifications = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='добавить триггер', callback_data='add_trigger')],
                                                 [InlineKeyboardButton(text='удалить триггер', callback_data='remove_trigger')]])
 
+remove_notifications = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Температура воздуха', callback_data='temperature')],
+                                                [InlineKeyboardButton(text='Влажность воздуха', callback_data='humidity_air')],
+                                                [InlineKeyboardButton(text='Влажность почвы', callback_data='humidity_soil')],
+                                                [InlineKeyboardButton(text='🚫 отменить', callback_data='cancel')]])
+
+remove_action = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='включение полива', callback_data='rm_watering_on')],
+                                                [InlineKeyboardButton(text='включение освещения', callback_data='rm_light_on')],
+                                                [InlineKeyboardButton(text='выключение освещения', callback_data='rm_light_off')],
+                                                [InlineKeyboardButton(text='включение проветривания', callback_data='rm_emergency_on')],
+                                                [InlineKeyboardButton(text='выключение проветривания', callback_data='rm_emergency_off')],
+                                                [InlineKeyboardButton(text='🚫 отменить', callback_data='cancel')]])
+
 new_action_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='включение полива', callback_data='add_watering_on')],
                                                 [InlineKeyboardButton(text='включение освещения', callback_data='add_light_on')],
                                                 [InlineKeyboardButton(text='выключение освещения', callback_data='add_light_off')],
