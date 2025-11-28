@@ -34,7 +34,20 @@ new_notification_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardBut
                                                 [InlineKeyboardButton(text='влажность воздуха', callback_data='humidity_air')],
                                                 [InlineKeyboardButton(text='влажность почвы', callback_data='humidity_soil')],
                                                 [InlineKeyboardButton(text='🚫 отменить', callback_data='cancel')]])
+'''
+analytics_keyboard = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='запросить у нейросети новые рекомендации', callback_data='get_recommendations'),
+                                                InlineKeyboardButton(text='задать свой вопрос нейросети', callback_data='new_request')]])
+'''
 
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
+analytics_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text='запросить у нейросети новые рекомендации')],
+            [KeyboardButton(text='задать свой вопрос нейросети')]
+    ],
+    resize_keyboard=True,
+    one_time_keyboard=False
+)
 
 def watering_control(is_on: bool) -> InlineKeyboardMarkup:
     if is_on:
