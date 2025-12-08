@@ -162,8 +162,8 @@ async def process_recommendation(user_id: int):
     return response
 
 
-'''
-@router.message(F.text.lower() == "анализ")
+
+@router.message(F.text.lower() == "запросить у нейросети новые рекомендации")
 async def analyze_data(message: Message):
     #token = get_token_by_telegram_id(message.from_user.id)
     token = await get_token_by_telegram_id(message.from_user.id)
@@ -218,5 +218,5 @@ async def analyze_data(message: Message):
             )
 
     print("Recommendation saved/updated for token:", token)
-'''
+
 

@@ -12,9 +12,7 @@ import database
 from database import get_token_by_telegram_id
 from database import get_current_status
 
-
 router = Router()
-
 
 class AddNewNotification(StatesGroup):
     notification_type = State()
