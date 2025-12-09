@@ -7,6 +7,7 @@ from .analytics import router as analytics_router
 from .reference import router as reference_router
 from ai.handlers import router as ai_router
 
+
 routers = [
     register_router,
     control_router,

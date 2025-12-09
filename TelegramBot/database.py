@@ -33,6 +33,18 @@ async def get_token_by_telegram_id(telegram_id: int):
             return result["token"]
         return None
 
+ ### получение телеграм айди по токену
+async def get_telegram_id_by_token(token: str):
+    global pool
+    async with pool.acquire() as conn:
+        result = await conn.fetchrow(
+            "SELECT telegram_id FROM users WHERE token = $1",
+            token
+        )
+        if result:
+            return result["telegram_id"]
+        return None
+
 ### получение текущего статуса
 async def get_current_status(token, trigger_type):
     query = """
