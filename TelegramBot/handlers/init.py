@@ -6,6 +6,7 @@ from .state import router as state_router
 from .analytics import router as analytics_router
 from .reference import router as reference_router
 from ai.handlers import router as ai_router
+from .graphs import router as graphs_router
 
 
 routers = [
@@ -16,5 +17,6 @@ routers = [
     state_router,
     analytics_router,
     reference_router,
-    ai_router
+    ai_router,
+    graphs_router
 ]

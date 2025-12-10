@@ -66,6 +66,20 @@ async def get_user_plant_name(user_id: int) -> str:
     return row["plant_name"] if row and row["plant_name"] else "растение"
 
 
+### получение суточных данных датчиков по типу
+async def get_sensor_data(token: str, sensor_type: str):
+    query = """
+        SELECT time, value
+        FROM sensor_data
+        WHERE token = $1 AND type = $2
+        ORDER BY time ASC
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(query, token, sensor_type)
+
+    times = [row["time"] for row in rows]
+    values = [float(row["value"]) for row in rows]
+    return times, values
 
 
 
