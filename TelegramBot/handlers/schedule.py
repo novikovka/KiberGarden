@@ -103,9 +103,19 @@ async def add_settings_select(callback: CallbackQuery, state: FSMContext):
         action_status=action_status
     )
 
+    # Сопоставление технического типа действия с нормальным названием
+    pretty_action = {
+        "emergency": "проветривания",
+        "watering": "полива",
+        "light": "освещения"
+    }.get(action_type, action_type)
+
+    # Формируем текст: включение/выключение + действие
+    action_phrase = f"{'включение' if action_status else 'выключение'} {pretty_action}"
+
     await callback.message.answer(
-        f"Вы выбрали: {action_type} ({'включить' if action_status == True else 'выключить'})\n"
-        "Введите время выполнения (например, 12:00):"
+        f"Вы выбрали: {action_phrase}\n"
+        "Введите время выполнения действия, которое вы хотите добавить (например, 12:00):"
     )
 
     # Переход к следующему состоянию
@@ -141,12 +151,19 @@ async def add_settings_time(message: Message, state: FSMContext):
             data["action_status"], action_time, token, action_type
         )
 
-    # Пример вывода
+    pretty_action = {
+        "watering": "полива",
+        "light": "освещения",
+        "emergency": "проветривания"
+    }.get(data['action_type'], data['action_type'])
+
+    # Формируем текст: включение / выключение
+    status_text = "Включение" if data['action_status'] else "Выключение"
+
+    # Итоговое сообщение
     await message.answer(
         f"✅ Новое действие добавлено:\n"
-        f"Тип: {data['action_type']}\n"
-        f"Статус: {data['action_status']}\n"
-        f"Время: {data['action_time']}"
+        f"{status_text} {pretty_action} в {data['action_time']}."
     )
 
     # Очистить состояние
@@ -183,9 +200,19 @@ async def rm_settings_select(callback: CallbackQuery, state: FSMContext):
         action_status=action_status
     )
 
+    # Сопоставление технического типа действия с нормальным названием
+    pretty_action = {
+        "emergency": "проветривания",
+        "watering": "полива",
+        "light": "освещения"
+    }.get(action_type, action_type)
+
+    # Формируем текст: включение/выключение + действие
+    action_phrase = f"{'включение' if action_status else 'выключение'} {pretty_action}"
+
     await callback.message.answer(
-        f"Вы выбрали: {action_type} ({'включить' if action_status == True else 'выключить'})\n"
-        "Введите время выполнения (например, 12:00):"
+        f"Вы выбрали: {action_phrase}\n"
+        "Введите время выполнения действия, которое вы хотите удалить(например, 12:00):"
     )
 
     # Переход к следующему состоянию
@@ -221,12 +248,23 @@ async def rm_settings_time(message: Message, state: FSMContext):
             data["action_status"], action_time, token, action_type
         )
 
-    # Пример вывода
+    # action_type может приходить в формате "WATERING", "LIGHT", "VENTILATION"
+    action_type_lower = action_type.lower()
+
+    pretty_action = {
+        "watering": "полива",
+        "lighting": "освещения",
+        "light": "освещения",  # на случай LIGHT
+        "ventilation": "проветривания",
+        "emergency": "проветривания"
+    }.get(action_type_lower, action_type_lower)
+
+    # Включение / выключение
+    status_text = "включение" if data["action_status"] else "выключение"
+    time_str = action_time.strftime("%H:%M")
+
     await message.answer(
-        f" Удалено действие:\n"
-        f"Тип: {data['action_type']}\n"
-        f"Статус: {data['action_status']}\n"
-        f"Время: {data['action_time']}"
+        f"🗑 Действие удалено: {status_text} {pretty_action} в {time_str}."
     )
 
     # Очистить состояние

@@ -14,6 +14,7 @@ set_notifications = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
 remove_notifications = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Температура воздуха', callback_data='temperature')],
                                                 [InlineKeyboardButton(text='Влажность воздуха', callback_data='humidity_air')],
                                                 [InlineKeyboardButton(text='Влажность почвы', callback_data='humidity_soil')],
+                                                [InlineKeyboardButton(text='уровень воды в резервуаре', callback_data='water_level')],
                                                 [InlineKeyboardButton(text='🚫 отменить', callback_data='cancel')]])
 
 remove_action = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='включение полива', callback_data='rm_watering_on')],
@@ -33,18 +34,14 @@ new_action_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(te
 new_notification_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='температура воздуха', callback_data='temperature')],
                                                 [InlineKeyboardButton(text='влажность воздуха', callback_data='humidity_air')],
                                                 [InlineKeyboardButton(text='влажность почвы', callback_data='humidity_soil')],
+                                                [InlineKeyboardButton(text='уровень воды в резервуаре', callback_data='water_level')],
                                                 [InlineKeyboardButton(text='🚫 отменить', callback_data='cancel')]])
-'''
-analytics_keyboard = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='запросить у нейросети новые рекомендации', callback_data='get_recommendations'),
-                                                InlineKeyboardButton(text='задать свой вопрос нейросети', callback_data='new_request')]])
-'''
+
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 analytics_keyboard = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text='запросить у нейросети новые рекомендации')],
-            [KeyboardButton(text='задать свой вопрос нейросети')]
-    ],
+    keyboard=[[KeyboardButton(text='запросить у нейросети новые рекомендации по уходу за Вашим растением')]],
     resize_keyboard=True,
     one_time_keyboard=False
 )

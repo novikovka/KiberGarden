@@ -81,7 +81,7 @@ async def add_new_notification(callback: CallbackQuery, state: FSMContext):
 async def add_notification_type(callback: CallbackQuery, state: FSMContext):
     chosen_type = callback.data
 
-    # ✅ Обработка кнопки "Отменить"
+    # Обработка кнопки "Отменить"
     if chosen_type == "cancel":
         await callback.message.answer("Добавление нового триггера уведомлений отменено ✅")
         await state.clear()  # очищаем состояние
@@ -91,7 +91,7 @@ async def add_notification_type(callback: CallbackQuery, state: FSMContext):
     # Сохраняем выбранный тип
     await state.update_data(notification_type=chosen_type)
 
-    # ✅ Обрабатываем выбранные типы триггеров
+    # Обрабатываем выбранные типы триггеров
     if chosen_type == "temperature":
         await callback.message.answer("Введите значение температуры воздуха при котором Вы хотите получать уведомление:")
         await state.set_state(AddNewNotification.notification_value)
@@ -102,6 +102,10 @@ async def add_notification_type(callback: CallbackQuery, state: FSMContext):
 
     elif chosen_type == "humidity_soil":
         await callback.message.answer("Введите значение влажности почвы при котором Вы хотите получать уведомление:")
+        await state.set_state(AddNewNotification.notification_value)
+
+    elif chosen_type == "water_level":
+        await callback.message.answer("Введите значение уровня воды в резервуаре при котором Вы хотите получать уведомление:")
         await state.set_state(AddNewNotification.notification_value)
 
     else:
@@ -127,10 +131,23 @@ async def add_notification_value(message: Message, state: FSMContext):
             notification_type, token, data["notification_value"]
         )
 
+    # Преобразуем тип триггера в человекопонятный вариант
+    pretty_type = {
+        "temperature": "Температура",
+        "humidity_air": "Влажность воздуха",
+        "humidity_soil": "Влажность почвы",
+        "water_level": "Уровень воды",
+    }.get(data["notification_type"], data["notification_type"])
+
+    # Определяем единицу измерения
+    if data["notification_type"] == "temperature":
+        unit = "°C"
+    else:
+        unit = "%"
+
     await message.answer(
-        f"✅ Новый триггер уведомления добавлен:\n"
-        f"Тип: {data['notification_type']}\n"
-        f"Значение: {data['notification_value']}"
+        f"✅ Триггер добавлен!\n"
+        f"{pretty_type}: {data['notification_value']}{unit}"
     )
 
     # Очистить состояние
@@ -151,7 +168,7 @@ async def remove_notification(callback: CallbackQuery, state: FSMContext):
 async def remove_notification_type(callback: CallbackQuery, state: FSMContext):
     chosen_type = callback.data
 
-    # ✅ Обработка кнопки "Отменить"
+    #  Обработка кнопки "Отменить"
     if chosen_type == "cancel":
         await callback.message.answer("Удаление триггера уведомлений отменено ✅")
         await state.clear()  # очищаем состояние
@@ -161,7 +178,7 @@ async def remove_notification_type(callback: CallbackQuery, state: FSMContext):
     # Сохраняем выбранный тип
     await state.update_data(not_remove_type=chosen_type)
 
-    # ✅ Обрабатываем выбранные типы триггеров
+    #  Обрабатываем выбранные типы триггеров
     if chosen_type == "temperature":
         await callback.message.answer("Введите значение триггера температуры который Вы хотите удалить:")
         await state.set_state(RemoveNotification.not_remove_value)
@@ -172,6 +189,10 @@ async def remove_notification_type(callback: CallbackQuery, state: FSMContext):
 
     elif chosen_type == "humidity_soil":
         await callback.message.answer("Введите значение триггера влажности почвы который Вы хотите удалить:")
+        await state.set_state(RemoveNotification.not_remove_value)
+
+    elif chosen_type == "water_level":
+        await callback.message.answer("Введите значение триггера уровня воды который Вы хотите удалить:")
         await state.set_state(RemoveNotification.not_remove_value)
 
     else:
@@ -196,9 +217,23 @@ async def remove_notification_value(message: Message, state: FSMContext):
             notification_type, token, data["not_remove_value"]
         )
 
+    # Преобразование типа в человекопонятный вид
+    pretty_type = {
+        "temperature": "Температура",
+        "humidity_air": "Влажность воздуха",
+        "humidity_soil": "Влажность почвы",
+        "water_level": "Уровень воды",
+    }.get(data["not_remove_type"], data["not_remove_type"])
+
+    # Определяем единицы измерения
+    if data["not_remove_type"] == "temperature":
+        unit = "°C"
+    else:
+        unit = "%"
+
     await message.answer(
-        f"✅ Триггер уведомления {data['not_remove_type']}, \n"
-        f"значение: {data['not_remove_value']} - удален!\n"
+        f"✅ Триггер удалён!\n"
+        f"{pretty_type}: {data['not_remove_value']}{unit}"
     )
 
     # Очистить состояние

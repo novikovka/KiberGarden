@@ -17,7 +17,6 @@ router = Router()
 
 class Register(StatesGroup):
     name = State()
-    #ip_address = State()
     token = State()
     plat_name = State()
     telegram_id = State()
@@ -41,24 +40,6 @@ async def get_ip(message: Message, state: FSMContext):
     await message.answer("Какое растение вы хотите выращивать?")
     await state.set_state(Register.plat_name)
 
-'''
-@router.message(Register.plat_name)
-async def get_token(message: Message, state: FSMContext):
-    user_data = await state.get_data()
-    name = user_data["name"]
-    token = user_data["token"]
-    plant_name = message.text
-    user_id = message.from_user.id
-
-    async with database.pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO users (telegram_id, name, plant_name, token) VALUES ($1, $2, $3, $4)",
-            user_id, name, plant_name, token
-        )
-
-    await message.answer("✅ Регистрация завершена! Данные сохранены в базу.")
-    await state.clear()
-'''
 
 def create_initial_plant_prompt(plant_name: str) -> str:
     return f"""
@@ -95,6 +76,17 @@ async def finish_registration(message: Message, state: FSMContext):
             """,
             user_id, name, plant_name, token
         )
+
+        # Автоматическое добавление записи в таблицу notifications
+        '''
+        await conn.execute(
+            """
+            INSERT INTO notifications (type, token, value)
+            VALUES ($1, $2, $3)
+            """,
+            "WATER_LEVEL", token, 25
+        )
+        '''
 
     # 2. Создаём промпт для нейросети
     prompt = create_initial_plant_prompt(plant_name)
