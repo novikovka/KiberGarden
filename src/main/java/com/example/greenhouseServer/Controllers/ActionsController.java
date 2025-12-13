@@ -28,7 +28,7 @@ public class ActionsController {
         this.actionsServiceIntr = actionsServiceIntr;
     }
 
-    @GetMapping("/createActions")
+    @PostMapping("/createActions")
     public ResponseEntity<HttpStatus> createActions(@RequestBody @Valid Actions actions,
                                                     BindingResult bindingResult){
         if (bindingResult.hasErrors()){

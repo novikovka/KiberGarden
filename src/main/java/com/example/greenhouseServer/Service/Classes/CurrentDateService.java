@@ -19,8 +19,26 @@ public class CurrentDateService implements CurrentDateServiceIntr {
     }
 
     @Override
-    @Transactional
     public void save(CurrentDate currentDate) {
         currentDateRepositoryIntr.save(currentDate);
     }
+
+    @Override
+    @Transactional
+    public void update(CurrentDate newCurrentData) {
+        CurrentDate upCurrentData = findByToken(newCurrentData.getToken());
+        if (upCurrentData != null) {
+            upCurrentData.setIsWorking(newCurrentData.getIsWorking());
+            upCurrentData.setTypeBool(newCurrentData.getTypeBool());
+            save(upCurrentData);
+        } else {
+            save(newCurrentData);
+        }
+
+    }
+
+    private CurrentDate findByToken(String token){
+        return currentDateRepositoryIntr.findByToken(token);
+    }
+
 }

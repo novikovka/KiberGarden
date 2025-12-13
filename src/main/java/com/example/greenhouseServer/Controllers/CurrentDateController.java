@@ -39,8 +39,7 @@ public class CurrentDateController {
             }
             throw new IndicationsNotCreatedException(errorMsg.toString());
         }
-
-        currentDateServiceIntr.save(currentDate);
+        currentDateServiceIntr.update(currentDate);
         return ResponseEntity.ok(HttpStatus.OK);
     }
 

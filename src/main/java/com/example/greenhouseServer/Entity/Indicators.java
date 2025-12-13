@@ -1,6 +1,7 @@
 package com.example.greenhouseServer.Entity;
 
 import com.example.greenhouseServer.Entity.EnumList.TypeValue;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -26,6 +27,7 @@ public class Indicators {
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
     @NotNull(message = "type do not empty")
+    @JsonProperty("type")
     private TypeValue nameValue;
 
     @Column(name = "value")
@@ -33,6 +35,7 @@ public class Indicators {
     private int value;
 
     @Column(name = "time")
+    @JsonProperty("time")
     private LocalTime timeAction;
 
     public Indicators() {

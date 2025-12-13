@@ -1,6 +1,7 @@
 package com.example.greenhouseServer.Entity;
 
 import com.example.greenhouseServer.Entity.EnumList.TypeBool;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -19,11 +20,13 @@ public class Actions {
     @JoinColumn(name = "token", referencedColumnName = "token")
     @NotEmpty(message = "token do not empty")
     @Size(min = 1, max = 30, message = "Size token is error")
+    @JsonProperty("token")
     private String token;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type")
     @NotEmpty(message = "type do not empty")
+    @JsonProperty("type")
     private TypeBool typeBool;
 
     @Column(name = "time")
@@ -32,6 +35,7 @@ public class Actions {
 
     @Column(name = "status")
     @NotEmpty(message = "bool working do not empty")
+    @JsonProperty("status")
     private Boolean isWorking;
 
     public Actions() {
@@ -52,11 +56,11 @@ public class Actions {
         this.idActions = idActions;
     }
 
-    public Boolean getWorking() {
+    public Boolean getIsWorking() {
         return isWorking;
     }
 
-    public void setWorking(Boolean working) {
+    public void setIsWorking(Boolean working) {
         isWorking = working;
     }
 

@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UsersRepositoryIntr extends JpaRepository<Users, Long> {
+    Users findByToken(String token);
 }

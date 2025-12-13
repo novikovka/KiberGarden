@@ -1,5 +1,6 @@
 package com.example.greenhouseServer.Service.Classes;
 
+import com.example.greenhouseServer.Entity.CurrentDate;
 import com.example.greenhouseServer.Entity.Users;
 import com.example.greenhouseServer.Repository.UsersRepositoryIntr;
 import com.example.greenhouseServer.Service.Interfaces.UsersServiceIntr;
@@ -23,4 +24,19 @@ public class UsersService implements UsersServiceIntr {
     public void save(Users user) {
         usersRepositoryIntr.save(user);
     }
+
+    @Override
+    @Transactional
+    public void update(String token, String ipAddress) {
+        Users existingUser = findByToken(token);
+        if (existingUser != null) {
+            existingUser.setIpAddress(ipAddress);
+            save(existingUser);
+        }
+    }
+
+    private Users findByToken(String token){
+        return usersRepositoryIntr.findByToken(token);
+    }
+
 }
