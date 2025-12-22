@@ -1,34 +1,78 @@
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters import CommandStart, Command
-from aiogram.fsm.state import State, StatesGroup #для состояний
+from aiogram.filters import Command
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from datetime import datetime
 
-#импортируем все по отношению к main
-import keyboards as kb
-#from database import pool
 import database
 from database import get_token_by_telegram_id
-from database import get_current_status
+import keyboards as kb
+
 
 router = Router()
 
-class AddNewNotification(StatesGroup):
-    notification_type = State()
-    notification_value = State()
+# -------------------------------------------------------------------
+#  Конфигурация типов уведомлений
+# -------------------------------------------------------------------
 
-class RemoveNotification(StatesGroup):
-    not_remove_type = State()
-    not_remove_value = State()
+NOTIFICATION_TYPES = {
+    "temperature": {
+        "db": "TEMPERATURE",
+        "title": "Температура воздуха",
+        "emoji": "🌡",
+        "unit": "°C",
+        "add_prompt": "Введите температуру, при которой отправлять уведомление:",
+        "del_prompt": "Введите значение триггера температуры, который нужно удалить:",
+    },
+    "humidity_air": {
+        "db": "HUMIDITY_AIR",
+        "title": "Влажность воздуха",
+        "emoji": "💧",
+        "unit": "%",
+        "add_prompt": "Введите влажность воздуха для уведомления:",
+        "del_prompt": "Введите значение триггера влажности воздуха для удаления:",
+    },
+    "humidity_soil": {
+        "db": "HUMIDITY_SOIL",
+        "title": "Влажность почвы",
+        "emoji": "🌱",
+        "unit": "%",
+        "add_prompt": "Введите влажность почвы для уведомления:",
+        "del_prompt": "Введите значение триггера влажности почвы для удаления:",
+    },
+    "water_level": {
+        "db": "WATER_LEVEL",
+        "title": "Уровень воды",
+        "emoji": "🚰",
+        "unit": "%",
+        "add_prompt": "Введите уровень воды для уведомления:",
+        "del_prompt": "Введите значение триггера уровня воды для удаления:",
+    },
+}
 
-### Переход из основного меню в раздел уведомлений
-@router.message(Command('notifications'))
+
+# -------------------------------------------------------------------
+#  FSM
+# -------------------------------------------------------------------
+
+class AddNotificationState(StatesGroup):
+    type = State()
+    value = State()
+
+class RemoveNotificationState(StatesGroup):
+    type = State()
+    value = State()
+
+
+# -------------------------------------------------------------------
+#  Команда /notifications
+# -------------------------------------------------------------------
+
+@router.message(Command("notifications"))
 async def cmd_notifications(message: Message):
     user_id = message.from_user.id
     token = await get_token_by_telegram_id(user_id)
 
-    # Запрос в базу данных
     async with database.pool.acquire() as conn:
         rows = await conn.fetch("""
             SELECT type, value
@@ -41,200 +85,129 @@ async def cmd_notifications(message: Message):
         await message.answer("🔔 Уведомления пока не настроены.", reply_markup=kb.set_notifications)
         return
 
-    # Формируем текст
-    type_map = {
-        "TEMPERATURE": "🌡 Температура воздуха",
-        "HUMIDITY_AIR": "💧 Влажность воздуха",
-        "HUMIDITY_SOIL": "🌱 Влажность почвы",
-        "WATER_LEVEL": "🚰 Уровень воды",
-    }
-
     text_lines = ["Триггеры уведомлений:\n"]
+
     for row in rows:
-        sensor_name = type_map.get(row["type"], row["type"])
-        value = row["value"]
-
-        # Форматирование единиц измерения
-        if row["type"] == "TEMPERATURE":
-            text_lines.append(f"{sensor_name}: {value}°C")
-        elif row["type"] in ("HUM_AIR", "HUM_SOIL", "WATER_LEVEL"):
-            text_lines.append(f"{sensor_name}: {value}%")
+        info = next((v for v in NOTIFICATION_TYPES.values() if v["db"] == row["type"]), None)
+        if info:
+            text_lines.append(f"{info['emoji']} {info['title']}: {row['value']}{info['unit']}")
         else:
-            text_lines.append(f"{sensor_name}: {value}")
+            text_lines.append(f"{row['type']}: {row['value']}")
 
-    # Отправляем пользователю красиво оформленный текст
     await message.answer("\n".join(text_lines), reply_markup=kb.set_notifications)
 
 
-### Добавление нового триггера уведомлений
+# -------------------------------------------------------------------
+#  Добавление триггера
+# -------------------------------------------------------------------
 
 @router.callback_query(F.data == "add_trigger")
-async def add_new_notification(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(AddNewNotification.notification_type)
-    await callback.message.answer(
-        "Выберите тип нового триггера",
-        reply_markup=kb.new_notification_type
-    )
+async def add_trigger(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AddNotificationState.type)
+    await callback.message.answer("Выберите тип нового триггера:", reply_markup=kb.new_notification_type)
     await callback.answer()
 
-@router.callback_query(AddNewNotification.notification_type)
-async def add_notification_type(callback: CallbackQuery, state: FSMContext):
-    chosen_type = callback.data
 
-    # Обработка кнопки "Отменить"
-    if chosen_type == "cancel":
-        await callback.message.answer("Добавление нового триггера уведомлений отменено ✅")
-        await state.clear()  # очищаем состояние
-        await callback.answer()
+@router.callback_query(AddNotificationState.type)
+async def add_trigger_type(callback: CallbackQuery, state: FSMContext):
+    type_key = callback.data
+
+    if type_key == "cancel":
+        await callback.message.answer("Добавление триггера отменено.")
+        await state.clear()
         return
 
-    # Сохраняем выбранный тип
-    await state.update_data(notification_type=chosen_type)
+    info = NOTIFICATION_TYPES.get(type_key)
+    if not info:
+        await callback.message.answer("Неизвестный тип триггера.")
+        return
 
-    # Обрабатываем выбранные типы триггеров
-    if chosen_type == "temperature":
-        await callback.message.answer("Введите значение температуры воздуха при котором Вы хотите получать уведомление:")
-        await state.set_state(AddNewNotification.notification_value)
+    await state.update_data(type=type_key)
+    await state.set_state(AddNotificationState.value)
 
-    elif chosen_type == "humidity_air":
-        await callback.message.answer("Введите значение влажности воздуха при котором Вы хотите получать уведомление:")
-        await state.set_state(AddNewNotification.notification_value)
-
-    elif chosen_type == "humidity_soil":
-        await callback.message.answer("Введите значение влажности почвы при котором Вы хотите получать уведомление:")
-        await state.set_state(AddNewNotification.notification_value)
-
-    elif chosen_type == "water_level":
-        await callback.message.answer("Введите значение уровня воды в резервуаре при котором Вы хотите получать уведомление:")
-        await state.set_state(AddNewNotification.notification_value)
-
-    else:
-        await callback.message.answer("Неизвестная команда, попробуйте снова.")
-
+    await callback.message.answer(info["add_prompt"])
     await callback.answer()
 
 
-@router.message(AddNewNotification.notification_value)
-async def add_notification_value(message: Message, state: FSMContext):
-    new_value = message.text.strip()
-    await state.update_data(notification_value= int(new_value))
+@router.message(AddNotificationState.value)
+async def add_trigger_value(message: Message, state: FSMContext):
+    value_text = message.text.strip()
 
-    # Получаем все данные
+    if not value_text.isdigit():
+        await message.answer("Введите число, пожалуйста.")
+        return
+
+    value = int(value_text)
     data = await state.get_data()
-    user_id = message.from_user.id
-    token = await get_token_by_telegram_id(user_id)
-    notification_type = data["notification_type"].upper()
+
+    type_key = data["type"]
+    info = NOTIFICATION_TYPES[type_key]
+
+    token = await get_token_by_telegram_id(message.from_user.id)
 
     async with database.pool.acquire() as conn:
         await conn.execute(
             "INSERT INTO notifications (type, token, value) VALUES ($1, $2, $3)",
-            notification_type, token, data["notification_value"]
+            info["db"], token, value
         )
 
-    # Преобразуем тип триггера в человекопонятный вариант
-    pretty_type = {
-        "temperature": "Температура",
-        "humidity_air": "Влажность воздуха",
-        "humidity_soil": "Влажность почвы",
-        "water_level": "Уровень воды",
-    }.get(data["notification_type"], data["notification_type"])
-
-    # Определяем единицу измерения
-    if data["notification_type"] == "temperature":
-        unit = "°C"
-    else:
-        unit = "%"
-
-    await message.answer(
-        f"✅ Триггер добавлен!\n"
-        f"{pretty_type}: {data['notification_value']}{unit}"
-    )
-
-    # Очистить состояние
+    await message.answer(f"✅ Триггер добавлен!\n{info['title']}: {value}{info['unit']}")
     await state.clear()
 
 
-### Удаление триггера уведомлений
+# -------------------------------------------------------------------
+#  Удаление триггера
+# -------------------------------------------------------------------
+
 @router.callback_query(F.data == "remove_trigger")
-async def remove_notification(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(RemoveNotification.not_remove_type)
-    await callback.message.answer(
-        "Выберите тип триггера для удаления:",
-        reply_markup=kb.remove_notifications
-    )
+async def remove_trigger(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(RemoveNotificationState.type)
+    await callback.message.answer("Выберите тип триггера для удаления:", reply_markup=kb.remove_notifications)
     await callback.answer()
 
-@router.callback_query(RemoveNotification.not_remove_type)
-async def remove_notification_type(callback: CallbackQuery, state: FSMContext):
-    chosen_type = callback.data
 
-    #  Обработка кнопки "Отменить"
-    if chosen_type == "cancel":
-        await callback.message.answer("Удаление триггера уведомлений отменено ✅")
-        await state.clear()  # очищаем состояние
-        await callback.answer()
+@router.callback_query(RemoveNotificationState.type)
+async def remove_trigger_type(callback: CallbackQuery, state: FSMContext):
+    type_key = callback.data
+
+    if type_key == "cancel":
+        await callback.message.answer("Удаление триггера отменено.")
+        await state.clear()
         return
 
-    # Сохраняем выбранный тип
-    await state.update_data(not_remove_type=chosen_type)
+    info = NOTIFICATION_TYPES.get(type_key)
+    if not info:
+        await callback.message.answer("Неизвестный тип триггера.")
+        return
 
-    #  Обрабатываем выбранные типы триггеров
-    if chosen_type == "temperature":
-        await callback.message.answer("Введите значение триггера температуры который Вы хотите удалить:")
-        await state.set_state(RemoveNotification.not_remove_value)
+    await state.update_data(type=type_key)
+    await state.set_state(RemoveNotificationState.value)
 
-    elif chosen_type == "humidity_air":
-        await callback.message.answer("Введите значение триггера влажности воздуха который Вы хотите удалить:")
-        await state.set_state(RemoveNotification.not_remove_value)
-
-    elif chosen_type == "humidity_soil":
-        await callback.message.answer("Введите значение триггера влажности почвы который Вы хотите удалить:")
-        await state.set_state(RemoveNotification.not_remove_value)
-
-    elif chosen_type == "water_level":
-        await callback.message.answer("Введите значение триггера уровня воды который Вы хотите удалить:")
-        await state.set_state(RemoveNotification.not_remove_value)
-
-    else:
-        await callback.message.answer("Неизвестная команда, попробуйте снова.")
-
+    await callback.message.answer(info["del_prompt"])
     await callback.answer()
 
-@router.message(RemoveNotification.not_remove_value)
-async def remove_notification_value(message: Message, state: FSMContext):
-    new_value = message.text.strip()
-    await state.update_data(not_remove_value= int(new_value))
 
-    # Получаем все данные
+@router.message(RemoveNotificationState.value)
+async def remove_trigger_value(message: Message, state: FSMContext):
+    value_text = message.text.strip()
+
+    if not value_text.isdigit():
+        await message.answer("Введите число, пожалуйста.")
+        return
+
+    value = int(value_text)
     data = await state.get_data()
-    user_id = message.from_user.id
-    token = await get_token_by_telegram_id(user_id)
-    notification_type = data["not_remove_type"].upper()
+
+    type_key = data["type"]
+    info = NOTIFICATION_TYPES[type_key]
+
+    token = await get_token_by_telegram_id(message.from_user.id)
 
     async with database.pool.acquire() as conn:
         await conn.execute(
             "DELETE FROM notifications WHERE type = $1 AND token = $2 AND value = $3",
-            notification_type, token, data["not_remove_value"]
+            info["db"], token, value
         )
 
-    # Преобразование типа в человекопонятный вид
-    pretty_type = {
-        "temperature": "Температура",
-        "humidity_air": "Влажность воздуха",
-        "humidity_soil": "Влажность почвы",
-        "water_level": "Уровень воды",
-    }.get(data["not_remove_type"], data["not_remove_type"])
-
-    # Определяем единицы измерения
-    if data["not_remove_type"] == "temperature":
-        unit = "°C"
-    else:
-        unit = "%"
-
-    await message.answer(
-        f"✅ Триггер удалён!\n"
-        f"{pretty_type}: {data['not_remove_value']}{unit}"
-    )
-
-    # Очистить состояние
+    await message.answer(f"✅ Триггер удалён!\n{info['title']}: {value}{info['unit']}")
     await state.clear()

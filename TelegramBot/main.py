@@ -8,6 +8,8 @@ from ai.handlers import process_recommendation
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from triggering import check_notifications
+from triggering import check_user_connections
+from connection_guard import ConnectionGuardMiddleware
 
 
 bot = Bot(token='8246553812:AAGEjCIdml2DsBfA3e4UeyHzjWb4SUwDv6w')
@@ -47,16 +49,27 @@ def schedule_jobs(pool):
         args=[bot, pool]      # <— передаём pool
     )
 
+    # проверка соединения с устройством
+    scheduler.add_job(
+        check_user_connections,
+        "interval",
+        minutes=1,
+        args=[bot, pool]
+    )
+
     scheduler.start()
 
 
 async def main():
-    # Подключаем роутеры
+    # Подключение роутеров
     for r in routers:
         dp.include_router(r)
 
-    # Инициализируем базу данных
-    await init_db()               # database.pool создаётся здесь
+    await init_db()
+
+    dp.message.middleware(
+        ConnectionGuardMiddleware(database.pool)
+    )
 
     # Запуск фоновых задач — после init_db()
     schedule_jobs(database.pool)

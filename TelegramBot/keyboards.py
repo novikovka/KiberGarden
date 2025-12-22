@@ -41,7 +41,7 @@ new_notification_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardBut
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 analytics_keyboard = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text='запросить у нейросети новые рекомендации по уходу за Вашим растением')]],
+    keyboard=[[KeyboardButton(text='Запросить у нейросети новые рекомендации')]],
     resize_keyboard=True,
     one_time_keyboard=False
 )

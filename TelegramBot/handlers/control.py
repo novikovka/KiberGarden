@@ -55,21 +55,20 @@ async def control(message: Message):
         await message.answer(text, reply_markup=keyboard_func(status))
 
 
-
+# HTTP запрос на сервер
 async def send_to_server(token: str, system_type: str, status: bool):
-    """
-    HTTP-запрос к серверу теплицы.
-    Отправляет JSON: {token, type, status}
-    """
+    # статический iP сервера
     url = "http://5.189.97.105:8080/api/createActions"
 
+    # пример: JSON: {12345, WATERING, TRUE}
+    # (включить полив у теплицы с токеном 12345)
     payload = {
         "token": token,
         "type": system_type,
         "status": status
     }
     print(payload)
-
+    '''
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(url, json=payload) as resp:
@@ -79,7 +78,7 @@ async def send_to_server(token: str, system_type: str, status: bool):
 
         except Exception as e:
             return f"Не удалось отправить команду на сервер: {e}"
-
+    '''
 
 # ------------------ ОБРАБОТЧИК КНОПОК ------------------
 

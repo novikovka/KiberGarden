@@ -1,8 +1,6 @@
 from openai import AsyncOpenAI
-#from config import AI_TOKEN
 
-# AI_TOKEN='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'
-AI_TOKEN='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'
+AI_TOKEN='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'
 
 
 client = AsyncOpenAI(
