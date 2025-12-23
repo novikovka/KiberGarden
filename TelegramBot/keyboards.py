@@ -1,6 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 
-get_number = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Отправить номер', request_contact=True)]], resize_keyboard=True)
+#get_number = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Отправить номер', request_contact=True)]], resize_keyboard=True)
 
 ventilation_control = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='включить', callback_data='on_ventilation'),
                                                 InlineKeyboardButton(text='выключить', callback_data='off_ventilation')]])
@@ -37,8 +37,6 @@ new_notification_type = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardBut
                                                 [InlineKeyboardButton(text='уровень воды в резервуаре', callback_data='water_level')],
                                                 [InlineKeyboardButton(text='🚫 отменить', callback_data='cancel')]])
 
-
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 analytics_keyboard = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text='Запросить у нейросети новые рекомендации')]],

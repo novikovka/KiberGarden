@@ -1,14 +1,10 @@
 from aiogram import F, Router
+from aiogram.client.session import aiohttp
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters import CommandStart, Command
-from aiogram.fsm.state import State, StatesGroup #для состояний
-from aiogram.fsm.context import FSMContext
-from datetime import datetime
-import aiohttp
+from aiogram.filters import Command
 
-#импортируем все по отношению к main
+
 import keyboards as kb
-#from database import pool
 import database
 from database import get_token_by_telegram_id
 from database import get_current_status
@@ -68,7 +64,7 @@ async def send_to_server(token: str, system_type: str, status: bool):
         "status": status
     }
     print(payload)
-    '''
+
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(url, json=payload) as resp:
@@ -78,7 +74,7 @@ async def send_to_server(token: str, system_type: str, status: bool):
 
         except Exception as e:
             return f"Не удалось отправить команду на сервер: {e}"
-    '''
+
 
 # ------------------ ОБРАБОТЧИК КНОПОК ------------------
 
@@ -119,40 +115,8 @@ async def toggle_device(callback: CallbackQuery):
     # Обновляем сообщение
     await callback.message.edit_text(message_text, reply_markup=keyboard)
 
-    # -------- 4) Если сервер вернул ошибку — уведомляем пользователя --------
+    #Если сервер вернул ошибку — уведомляем пользователя
 
     if server_response.startswith("Ошибка") or "не удалось" in server_response.lower():
         await callback.message.answer(f"⚠️ {server_response}")
 
-
-'''
-@router.callback_query(F.data.regexp(r"^(watering|light|emergency)_(on|off)$"))
-async def toggle_device(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    token = await get_token_by_telegram_id(user_id)
-
-    # Извлекаем тип устройства и действие
-    match = callback.data.split("_")
-    device_type, action = match[0].upper(), match[1]  # например -> WATERING, ON
-    is_on = action == "on"
-
-    # Обновляем статус в БД
-    async with database.pool.acquire() as conn:
-        await conn.execute("""
-            UPDATE current_state
-            SET status = $1
-            WHERE token = $2 AND type = $3
-        """, is_on, token, device_type)
-
-    # Формируем текст ответа и клавиатуру
-    device_name = device_names.get(device_type, device_type)
-    message_text = f"{device_name}: {'Включено' if is_on else 'Отключено'}"
-    keyboard = keyboards[device_type](is_on)
-
-    # Отправляем ответ
-    await callback.answer(f"{device_name} {'включено' if is_on else 'отключено'} ✅")
-
-    # Обновляем сообщение
-    await callback.message.edit_text(message_text, reply_markup=keyboard)
-
-'''

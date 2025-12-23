@@ -1,3 +1,5 @@
+### Файл подключения к базе данных
+
 import asyncpg
 from typing import Optional
 
@@ -12,14 +14,14 @@ async def init_db():
         host='127.0.0.1',
         port=5432
     )
-    print("✅ Database pool created")
+    print("Database pool created")
 
 
 async def close_db():
     global pool
     if pool:
         await pool.close()
-        print("🟡 Database pool closed")
+        print("Database pool closed")
 
 ### получение токена теплицы по телеграм айди
 async def get_token_by_telegram_id(telegram_id: int):
@@ -33,7 +35,7 @@ async def get_token_by_telegram_id(telegram_id: int):
             return result["token"]
         return None
 
- ### получение телеграм айди по токену
+### получение телеграм айди по токену
 async def get_telegram_id_by_token(token: str):
     global pool
     async with pool.acquire() as conn:
@@ -56,7 +58,7 @@ async def get_current_status(token, trigger_type):
     row = await pool.fetchrow(query, token, trigger_type)
     return row["status"] if row else None
 
-# получение названия растения, которое выращивает пользователь
+### получение названия растения, которое выращивает пользователь
 async def get_user_plant_name(user_id: int) -> str:
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -81,14 +83,4 @@ async def get_sensor_data(token: str, sensor_type: str):
     values = [float(row["value"]) for row in rows]
     return times, values
 
-
-
-'''
-connection = psycopg2.connect(user="postgres",
-                                  password="12345678",
-                                  host="localhost",
-                                  port="5432")
-
-    cursor = connection.cursor()
-'''
 

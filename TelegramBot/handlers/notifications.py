@@ -8,13 +8,9 @@ import database
 from database import get_token_by_telegram_id
 import keyboards as kb
 
-
 router = Router()
 
-# -------------------------------------------------------------------
-#  Конфигурация типов уведомлений
-# -------------------------------------------------------------------
-
+###  Конфигурация типов уведомлений
 NOTIFICATION_TYPES = {
     "temperature": {
         "db": "TEMPERATURE",
@@ -50,11 +46,6 @@ NOTIFICATION_TYPES = {
     },
 }
 
-
-# -------------------------------------------------------------------
-#  FSM
-# -------------------------------------------------------------------
-
 class AddNotificationState(StatesGroup):
     type = State()
     value = State()
@@ -63,11 +54,7 @@ class RemoveNotificationState(StatesGroup):
     type = State()
     value = State()
 
-
-# -------------------------------------------------------------------
-#  Команда /notifications
-# -------------------------------------------------------------------
-
+###  Команда /notifications
 @router.message(Command("notifications"))
 async def cmd_notifications(message: Message):
     user_id = message.from_user.id
@@ -97,10 +84,7 @@ async def cmd_notifications(message: Message):
     await message.answer("\n".join(text_lines), reply_markup=kb.set_notifications)
 
 
-# -------------------------------------------------------------------
-#  Добавление триггера
-# -------------------------------------------------------------------
-
+###  Добавление триггера
 @router.callback_query(F.data == "add_trigger")
 async def add_trigger(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AddNotificationState.type)
@@ -128,7 +112,6 @@ async def add_trigger_type(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(info["add_prompt"])
     await callback.answer()
 
-
 @router.message(AddNotificationState.value)
 async def add_trigger_value(message: Message, state: FSMContext):
     value_text = message.text.strip()
@@ -154,17 +137,12 @@ async def add_trigger_value(message: Message, state: FSMContext):
     await message.answer(f"✅ Триггер добавлен!\n{info['title']}: {value}{info['unit']}")
     await state.clear()
 
-
-# -------------------------------------------------------------------
-#  Удаление триггера
-# -------------------------------------------------------------------
-
+###  Удаление триггера
 @router.callback_query(F.data == "remove_trigger")
 async def remove_trigger(callback: CallbackQuery, state: FSMContext):
     await state.set_state(RemoveNotificationState.type)
     await callback.message.answer("Выберите тип триггера для удаления:", reply_markup=kb.remove_notifications)
     await callback.answer()
-
 
 @router.callback_query(RemoveNotificationState.type)
 async def remove_trigger_type(callback: CallbackQuery, state: FSMContext):
@@ -185,7 +163,6 @@ async def remove_trigger_type(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.answer(info["del_prompt"])
     await callback.answer()
-
 
 @router.message(RemoveNotificationState.value)
 async def remove_trigger_value(message: Message, state: FSMContext):

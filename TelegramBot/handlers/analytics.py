@@ -1,18 +1,16 @@
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import Command
 
 import keyboards as kb
-#from database import pool
 import database
 from database import get_token_by_telegram_id
 from ai.handlers import process_recommendation
+
 # Импортируем функцию из graph.py
 from .graphs import send_graphs
 
-
 router = Router()
-
 
 @router.message(Command("analytics"))
 async def get_recommendation(message: Message):
@@ -34,7 +32,7 @@ async def get_recommendation(message: Message):
     else:
         await message.answer(
             row["text"],
-            reply_markup=kb.analytics_keyboard  # ← добавляем клавиатуру
+            reply_markup=kb.analytics_keyboard  # добавляем клавиатуру
         )
 
 
@@ -45,4 +43,4 @@ async def analyze_data_callback(callback: CallbackQuery):
     response = await process_recommendation(callback.from_user.id)
 
     await callback.message.answer(response)
-    await callback.answer()  # закрыть "часики"
+    await callback.answer()

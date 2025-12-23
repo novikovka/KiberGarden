@@ -1,3 +1,5 @@
+### Вспомогательные файл для тестирования: генерирует суточные показания датчиков
+
 import asyncio
 import random
 from datetime import datetime, timedelta

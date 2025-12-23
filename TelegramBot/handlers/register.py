@@ -6,12 +6,7 @@ from aiogram.fsm.context import FSMContext
 from datetime import datetime
 from ai.generate import ai_generate
 
-#импортируем все по отношению к main
-import keyboards as kb
-#from database import pool
 import database
-from database import get_token_by_telegram_id
-from database import get_current_status
 
 router = Router()
 
@@ -58,7 +53,6 @@ def create_initial_plant_prompt(plant_name: str) -> str:
         Формат ответа: структурированный, понятный, в виде списка.
     """
 
-
 @router.message(Register.plat_name)
 async def finish_registration(message: Message, state: FSMContext):
     user_data = await state.get_data()
@@ -67,7 +61,7 @@ async def finish_registration(message: Message, state: FSMContext):
     plant_name = message.text
     user_id = message.from_user.id
 
-    # 1. Сохраняем пользователя в БД
+    # Сохраняем пользователя в БД
     async with database.pool.acquire() as conn:
         await conn.execute(
             """
@@ -88,10 +82,10 @@ async def finish_registration(message: Message, state: FSMContext):
         )
         '''
 
-    # 2. Создаём промпт для нейросети
+    # Создаём промпт для нейросети
     prompt = create_initial_plant_prompt(plant_name)
 
-    # 3. Вызываем нейросеть
+    # Вызываем нейросеть
     try:
         await message.answer("Запрашиваю рекомендации у нейросети... Подождите пару секунд ⏳")
         ai_response = await ai_generate(prompt)
@@ -101,7 +95,7 @@ async def finish_registration(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # 4. Отправляем рекомендации пользователю
+    # Отправляем рекомендации пользователю
     await message.answer(
         f"🌱 Отлично, вы выбрали растение: <b>{plant_name}</b>\n\n"
         f"Вот рекомендации по его выращиванию:\n\n"

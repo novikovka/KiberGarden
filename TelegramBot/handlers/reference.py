@@ -1,17 +1,5 @@
 from aiogram import F, Router, types
-from aiogram.types import Message, CallbackQuery
-from aiogram.filters import CommandStart, Command
-from aiogram.fsm.state import State, StatesGroup #для состояний
-from aiogram.fsm.context import FSMContext
-from datetime import datetime
-
-#импортируем все по отношению к main
-import keyboards as kb
-#from database import pool
-import database
-from database import get_token_by_telegram_id
-from ai.handlers import process_recommendation
-
+from aiogram.filters import Command
 
 router = Router()
 
@@ -57,7 +45,6 @@ text_help = (
     "- Настройка триггеров: температуры, влажности воздуха, влажности почвы и освещённости.\n"
     "- Когда значение выйдет за пределы нормы — вы получите уведомление.\n\n"
 )
-
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message):

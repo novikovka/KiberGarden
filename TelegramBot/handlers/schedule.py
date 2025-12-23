@@ -7,11 +7,8 @@ from datetime import datetime
 
 #импортируем все по отношению к main
 import keyboards as kb
-#from database import pool
 import database
 from database import get_token_by_telegram_id
-from database import get_current_status
-
 
 router = Router()
 
@@ -45,7 +42,6 @@ async def cmd_schedule(message: Message):
         )
         return
 
-    # Иконки и человеко-читаемые имена
     icons = {
         "WATERING": "💧 Полив",
         "LIGHT": "💡 Освещение",
@@ -235,7 +231,6 @@ async def rm_settings_time(message: Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
 
-    #time_text = data["action_time"]
     action_time = datetime.strptime(data["action_time"], "%H:%M").time()
     action_type = data["action_type"].upper()
     #action_status = data["action_status"]
